@@ -51,8 +51,44 @@ void initShortCuts(
 
 bool _isPressed(
     Set<LogicalKeyboardKey> keysPressed, Set<LogicalKeyboardKey> keysToPress) {
-  keysToPress = LogicalKeyboardKey.collapseSynonyms(keysToPress);
-  keysPressed = LogicalKeyboardKey.collapseSynonyms(keysPressed);
+  if (kIsWeb) {
+    //when we type shift on chrome flutter's core return two pressed keys : Shift Left && Shift Right. So we need to delete one on the set to run the action
+    var rights =
+        keysPressed.where((element) => element.debugName.contains("Right"));
+    var lefts =
+        keysPressed.where((element) => element.debugName.contains("Left"));
+    var toRemove = [];
+
+    for (final rightElement in rights) {
+      var leftElement = lefts.firstWhere(
+          (element) =>
+              element.debugName.split(" ")[0] ==
+              rightElement.debugName.split(" ")[0],
+          orElse: () => null);
+      if (leftElement != null) {
+        var actualKey = keysToPress.where((element) =>
+            element.debugName.split(" ")[0] ==
+            rightElement.debugName.split(" ")[0]);
+        if (actualKey != null &&
+            actualKey.length > 0 &&
+            actualKey.first.debugName.isNotEmpty)
+          actualKey.first.debugName.contains("Right")
+              ? toRemove.add(leftElement)
+              : toRemove.add(rightElement);
+      }
+    }
+
+    keysPressed.removeWhere((e) => toRemove.contains(e));
+  }
+
+  for (var x in keysPressed) {
+    print(x.keyLabel);
+  }
+
+  for (var x in keysToPress) {
+    print(x.keyLabel);
+  }
+
   return keysPressed.containsAll(keysToPress) &&
       keysPressed.length == keysToPress.length;
 }
@@ -276,7 +312,7 @@ class _KeyBoardShortcuts extends State<KeyBoardShortcuts> {
 String _getKeysToPress(Set<LogicalKeyboardKey> keysToPress) {
   String text = "";
   if (keysToPress != null) {
-    for (final i in keysToPress) text += i.debugName + " + ";
+    for (final i in keysToPress) text += i.keyLabel + " + ";
     text = text.substring(0, text.lastIndexOf(" + "));
   }
   return text;
